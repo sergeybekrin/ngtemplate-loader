@@ -49,11 +49,17 @@ module.exports = function (content) {
         html = content;
     }
 
-    return "var path = '"+jsesc(filePath)+"';\n" +
-        "var html = " + html + ";\n" +
-        (requireAngular ? "var angular = require('angular');\n" : "window.") +
-        "angular.module('" + ngModule + "').run(['$templateCache', function(c) { c.put(path, html) }]);\n" +
-        "module.exports = path;";
+    return [
+        "var path = '" + jsesc(filePath) + "';",
+        "function injectTemplate(c) { c.put(path, " + html + "); }",
+        "var $injector = angular.element(document).injector();",
+        "if ($injector) {",
+        "    injectTemplate($injector.get('$templateCache'));",
+        "} else {",
+        "   angular.module('" + ngModule + "').run(['$templateCache', injectTemplate]);",
+        "}",
+        "module.exports = path;"
+    ].join("\n");
 
     function findQuote(content, backwards) {
         var i = backwards ? content.length - 1 : 0;
